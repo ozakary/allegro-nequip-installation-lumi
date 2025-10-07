@@ -76,6 +76,9 @@ sed -i 's/hip::hipfft;//' /libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
 # Comment out the problematic regex line
 sed -i '95s/^/#/' /libtorch/share/cmake/Caffe2/public/LoadHIP.cmake
 
+# Remove hipblaslt from link interface
+sed -i 's/roc::hipblaslt;//g' /libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
+
 git clone --branch=$LAMMPS_BRANCH --depth=1 $LAMMPS_REPO lammps-$LAMMPS_VERSION
 
 curl -LO https://github.com/mir-group/pair_allegro/archive/$PAIR_ALLEGRO_COMMIT.tar.gz
