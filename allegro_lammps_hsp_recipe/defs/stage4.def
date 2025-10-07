@@ -18,6 +18,9 @@ module load pytorch
 
 module rm cray-libsci
 
+# Install Python development headers
+zypper --no-gpg-checks -n install python311-devel
+
 export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
 export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib64/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
 
