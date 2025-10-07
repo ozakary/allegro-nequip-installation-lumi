@@ -27,14 +27,16 @@ CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR vesin
 
 curl -LO https://github.com/mir-group/nequip/archive/$NEQUIP_COMMIT.tar.gz
 tar xf $NEQUIP_COMMIT.tar.gz
-cd nequip-*
+NEQUIP_DIR=$(tar -tzf $NEQUIP_COMMIT.tar.gz | head -1 | cut -f1 -d"/")
+cd $NEQUIP_DIR
 #sed -i 's/"torch>=1.10.0,<1.13,!=1.9.0",/"torch>=1.13.0",/g' setup.py
 CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR .
 cd ../ && rm -rf $NEQUIP_COMMIT.tar.gz nequip-*
 
 curl -LO https://github.com/mir-group/allegro/archive/$ALLEGRO_COMMIT.tar.gz
 tar xf $ALLEGRO_COMMIT.tar.gz
-cd allegro-*
+ALLEGRO_DIR=$(tar -tzf $ALLEGRO_COMMIT.tar.gz | head -1 | cut -f1 -d"/")
+cd $ALLEGRO_DIR
 CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR .
 cd ../ && rm -rf $ALLEGRO_COMMIT.tar.gz allegro-*
 
@@ -76,8 +78,8 @@ tar xf $LAMMPS_VERSION.tar.gz
 
 curl -LO https://github.com/mir-group/pair_allegro/archive/$PAIR_ALLEGRO_COMMIT.tar.gz
 tar xf $PAIR_ALLEGRO_COMMIT.tar.gz
-
-cd pair_allegro-*
+PAIR_ALLEGRO_DIR=$(tar -tzf $PAIR_ALLEGRO_COMMIT.tar.gz | head -1 | cut -f1 -d"/")
+cd $PAIR_ALLEGRO_DIR
 ./patch_lammps.sh ../lammps-$LAMMPS_VERSION/
 
 cd ../lammps-$LAMMPS_VERSION
