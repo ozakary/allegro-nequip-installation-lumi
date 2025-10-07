@@ -115,7 +115,7 @@ cmake ../cmake \
   -D PKG_ML-MACE=ON \
   -D MKL_INCLUDE_DIR=/opt/pytorch/include
 
-grep -rl "std=c++14" . | xargs sed -i 's/-std=c++14//g'
+grep -rl "std=c++14" . | xargs -r sed -i 's/-std=c++14//g' || true
 
 make install -j16
 
