@@ -10,7 +10,7 @@ LAMMPS_INSTALL_DIR=/opt/lammps
 AWSOFIPLUGIN_INSTALL_DIR=/opt/ofi-plugin
 
 # Install ROCm
-zypper -n addrepo https://download.opensuse.org/repositories/devel:/languages:/perl/15.5/devel:languages:perl.repo
+zypper -n addrepo https://download.opensuse.org/repositories/devel:/languages:/perl/15.6/devel:languages:perl.repo
 zypper --no-gpg-checks -n install $ROCM_RPM
 sed -i 's#gpgcheck=1#gpgcheck=0#g' /etc/zypp/repos.d/*.repo
 amdgpu-install -y --no-dkms --usecase=hiplibsdk,rocm --rocmrelease=$ROCM_RELEASE
