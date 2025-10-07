@@ -77,7 +77,7 @@ tar xf $LAMMPS_VERSION.tar.gz
 curl -LO https://github.com/mir-group/pair_allegro/archive/$PAIR_ALLEGRO_COMMIT.tar.gz
 tar xf $PAIR_ALLEGRO_COMMIT.tar.gz
 
-cd pair_allegro-$PAIR_ALLEGRO_COMMIT
+cd pair_allegro-*
 ./patch_lammps.sh ../lammps-$LAMMPS_VERSION/
 
 cd ../lammps-$LAMMPS_VERSION
