@@ -24,8 +24,8 @@ zypper --no-gpg-checks -n install python311-devel
 export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
 export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib64/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
 
-# Install wheel and setuptools first (required for building packages)
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR wheel setuptools
+# Install wheel, setuptools, and Cython first (required for building packages)
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR wheel setuptools Cython
 
 # Install Python dependencies for MACE and ML-IAP
 CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR e3nn
