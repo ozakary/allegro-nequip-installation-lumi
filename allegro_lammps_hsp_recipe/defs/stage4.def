@@ -73,15 +73,15 @@ popd
 
 sed -i 's/hip::hipfft;//' /libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
 
-git clone --branch=mace --depth=1 https://github.com/ACEsuit/lammps lammps-mace
+git clone --branch=$LAMMPS_BRANCH --depth=1 $LAMMPS_REPO lammps-$LAMMPS_VERSION
 
 curl -LO https://github.com/mir-group/pair_allegro/archive/$PAIR_ALLEGRO_COMMIT.tar.gz
 tar xf $PAIR_ALLEGRO_COMMIT.tar.gz
 PAIR_ALLEGRO_DIR=$(tar -tzf $PAIR_ALLEGRO_COMMIT.tar.gz | head -1 | cut -f1 -d"/")
 cd $PAIR_ALLEGRO_DIR
-./patch_lammps.sh ../lammps-mace/
+./patch_lammps.sh ../lammps-$LAMMPS_VERSION/
 
-cd ../lammps-mace
+cd ../lammps-$LAMMPS_VERSION
 
 mkdir build && cd build
 
@@ -115,7 +115,7 @@ make install -j16
 
 cd / 
 
-rm -rf libtorch lammps-mace
+rm -rf libtorch lammps-$LAMMPS_VERSION
 rm -rf pair_allegro-$PAIR_ALLEGRO_COMMIT $PAIR_ALLEGRO_COMMIT.tar.gz
 rm -rf libtorch-cxx11-abi-shared-with-deps-*.zip target.lst
 
