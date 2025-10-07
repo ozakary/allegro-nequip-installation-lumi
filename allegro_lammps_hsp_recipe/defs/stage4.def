@@ -18,28 +18,6 @@ module load pytorch
 
 module rm cray-libsci
 
-export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
-export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib64/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
-
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR wheel==$WHEEL_VERSION
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR matscipy==$MATSCIPY_VERSION
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR vesin==$VESIN_VERSION
-
-curl -LO https://github.com/mir-group/nequip/archive/$NEQUIP_COMMIT.tar.gz
-tar xf $NEQUIP_COMMIT.tar.gz
-NEQUIP_DIR=$(tar -tzf $NEQUIP_COMMIT.tar.gz | head -1 | cut -f1 -d"/")
-cd $NEQUIP_DIR
-#sed -i 's/"torch>=1.10.0,<1.13,!=1.9.0",/"torch>=1.13.0",/g' setup.py
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR .
-cd ../ && rm -rf $NEQUIP_COMMIT.tar.gz nequip-*
-
-curl -LO https://github.com/mir-group/allegro/archive/$ALLEGRO_COMMIT.tar.gz
-tar xf $ALLEGRO_COMMIT.tar.gz
-ALLEGRO_DIR=$(tar -tzf $ALLEGRO_COMMIT.tar.gz | head -1 | cut -f1 -d"/")
-cd $ALLEGRO_DIR
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR .
-cd ../ && rm -rf $ALLEGRO_COMMIT.tar.gz allegro-*
-
 module load craype-network-ofi
 
 curl -LO https://download.pytorch.org/libtorch/rocm6.0/libtorch-cxx11-abi-shared-with-deps-$LIBTORCH_VERSION.zip
@@ -81,13 +59,7 @@ sed -i 's/roc::hipblaslt;//g' /libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
 
 git clone --branch=$LAMMPS_BRANCH --depth=1 $LAMMPS_REPO lammps-$LAMMPS_VERSION
 
-curl -LO https://github.com/mir-group/pair_allegro/archive/$PAIR_ALLEGRO_COMMIT.tar.gz
-tar xf $PAIR_ALLEGRO_COMMIT.tar.gz
-PAIR_ALLEGRO_DIR=$(tar -tzf $PAIR_ALLEGRO_COMMIT.tar.gz | head -1 | cut -f1 -d"/")
-cd $PAIR_ALLEGRO_DIR
-./patch_lammps.sh ../lammps-$LAMMPS_VERSION/
-
-cd ../lammps-$LAMMPS_VERSION
+cd lammps-$LAMMPS_VERSION
 
 mkdir build && cd build
 
