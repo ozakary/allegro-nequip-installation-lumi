@@ -105,6 +105,7 @@ cmake ../cmake \
   -D HIP_PATH=/opt/rocm \
   -D CMAKE_TUNE_FLAGS="-munsafe-fp-atomics" \
   -D CMAKE_INSTALL_RPATH='$ORIGIN/../libtorch' \
+  -D PKG_ML-MACE=ON \
   -D MKL_INCLUDE_DIR=/opt/pytorch/include
 
 grep -rl "std=c++14" . | xargs sed -i 's/-std=c++14//g'
