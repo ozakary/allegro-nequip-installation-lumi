@@ -72,7 +72,9 @@ done
 popd
 
 sed -i 's/hip::hipfft;//' /libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
-sed -i 's/\\\.\([0-9]\)/\\\\\\\\.\1/g' /libtorch/share/cmake/Caffe2/public/LoadHIP.cmake
+
+# Comment out the problematic regex line
+sed -i '95s/^/#/' /libtorch/share/cmake/Caffe2/public/LoadHIP.cmake
 
 git clone --branch=$LAMMPS_BRANCH --depth=1 $LAMMPS_REPO lammps-$LAMMPS_VERSION
 
