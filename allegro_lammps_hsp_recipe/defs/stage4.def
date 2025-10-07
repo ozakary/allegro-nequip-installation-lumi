@@ -18,8 +18,25 @@ module load pytorch
 
 module rm cray-libsci
 
+export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
+export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib64/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
+
+# Install Python dependencies for MACE and ML-IAP
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR e3nn
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR opt-einsum-fx
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance-torch
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance-ops-torch
+
+# Install MACE
+git clone https://github.com/ACEsuit/mace.git
+cd mace
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR .
+cd ../ && rm -rf mace
+
 module load craype-network-ofi
 
+# Download and setup libtorch
 curl -LO https://download.pytorch.org/libtorch/rocm6.0/libtorch-cxx11-abi-shared-with-deps-$LIBTORCH_VERSION.zip
 unzip libtorch-cxx11-abi-shared-with-deps-*.zip
 
@@ -32,9 +49,6 @@ for libwithhash in $(ls *-*.so*); do
 done
 
 pwd
-
-#mv libmagma-*.so libmagma.so
-#mv libgomp-*.so.1 libgomp.so.1
 
 rm -rf *-*.so*
 
@@ -49,14 +63,12 @@ done
 
 popd
 
+# Fix CMake files
 sed -i 's/hip::hipfft;//' /libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
-
-# Comment out the problematic regex line
 sed -i '95s/^/#/' /libtorch/share/cmake/Caffe2/public/LoadHIP.cmake
-
-# Remove hipblaslt from link interface
 sed -i 's/roc::hipblaslt;//g' /libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
 
+# Clone LAMMPS develop branch
 git clone --branch=$LAMMPS_BRANCH --depth=1 $LAMMPS_REPO lammps-$LAMMPS_VERSION
 
 cd lammps-$LAMMPS_VERSION
@@ -65,7 +77,6 @@ mkdir build && cd build
 
 export HIPCC_COMPILE_FLAGS_APPEND="-std=c++17 -isystem ${CRAY_MPICH_PREFIX}/include "
 export HIPCC_LINK_FLAGS_APPEND="-L${CRAY_MPICH_PREFIX}/lib -lmpi ${PE_MPICH_GTL_DIR_amd_gfx90a} ${PE_MPICH_GTL_LIBS_amd_gfx90a} "
-
 
 export CMAKE_PREFIX_PATH=/libtorch/share/cmake:$ROCM_PATH/lib/cmake
 
@@ -85,21 +96,28 @@ cmake ../cmake \
   -D CMAKE_TUNE_FLAGS="-munsafe-fp-atomics" \
   -D CMAKE_INSTALL_RPATH='$ORIGIN/../libtorch' \
   -D PKG_ML-MACE=ON \
+  -D PKG_ML-IAP=ON \
+  -D MLIAP_ENABLE_PYTHON=ON \
+  -D PKG_ML-SNAP=ON \
+  -D PKG_PYTHON=ON \
+  -D BUILD_SHARED_LIBS=ON \
   -D MKL_INCLUDE_DIR=/opt/pytorch/include
 
 grep -rl "std=c++14" . | xargs -r sed -i 's/-std=c++14//g' || true
 
 make install -j16
 
+# Install LAMMPS Python package
+make install-python
+
 cd / 
 
 rm -rf libtorch lammps-$LAMMPS_VERSION
-rm -rf pair_allegro-$PAIR_ALLEGRO_COMMIT $PAIR_ALLEGRO_COMMIT.tar.gz
 rm -rf libtorch-cxx11-abi-shared-with-deps-*.zip target.lst
 
-mkdir -p /opt/container_modules/lammps-pair-allegro/
+mkdir -p /opt/container_modules/lammps-mace/
 
-cat >/opt/container_modules/lammps-pair-allegro/$LAMMPS_VERSION.lua <<EOF1
+cat >/opt/container_modules/lammps-mace/$LAMMPS_VERSION.lua <<EOF1
 local root="$LAMMPS_INSTALL_DIR"
 
 if not isloaded("pytorch") then
