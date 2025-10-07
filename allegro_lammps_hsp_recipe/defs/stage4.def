@@ -24,9 +24,11 @@ export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib64/python$PYTHON_VERSION/site-packages
 # Install Python dependencies for MACE and ML-IAP
 CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR e3nn
 CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR opt-einsum-fx
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance-torch
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance-ops-torch
+
+# For ROCm, cuEquivariance may not have pre-built wheels, try without it first
+# or install from source if needed
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance || true
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance-torch || true
 
 # Install MACE
 git clone https://github.com/ACEsuit/mace.git
