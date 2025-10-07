@@ -21,6 +21,9 @@ module rm cray-libsci
 export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
 export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib64/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
 
+# Install wheel and setuptools first (required for building packages)
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR wheel setuptools
+
 # Install Python dependencies for MACE and ML-IAP
 CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR e3nn
 CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR opt-einsum-fx
@@ -30,10 +33,10 @@ CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR opt-e
 CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance || true
 CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance-torch || true
 
-# Install MACE
+# Install MACE (remove --no-build-isolation to allow proper wheel building)
 git clone https://github.com/ACEsuit/mace.git
 cd mace
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR .
+CC=cc CXX=CC pip install --prefix $LAMMPS_INSTALL_DIR .
 cd ../ && rm -rf mace
 
 module load craype-network-ofi
