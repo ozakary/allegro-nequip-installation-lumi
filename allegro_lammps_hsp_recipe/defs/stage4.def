@@ -18,114 +18,113 @@ module load pytorch
 
 module rm cray-libsci
 
-# Install Python development headers
-zypper --no-gpg-checks -n install python311-devel
-
 export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
 export PYTHONPATH="$LAMMPS_INSTALL_DIR/lib64/python$PYTHON_VERSION/site-packages:$PYTHONPATH"
 
-# Install wheel, setuptools, and Cython first (required for building packages)
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR wheel setuptools Cython
+# Install dependencies
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR wheel==$WHEEL_VERSION
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR matscipy==$MATSCIPY_VERSION
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR vesin==$VESIN_VERSION
 
-# Install Python dependencies for MACE and ML-IAP
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR e3nn
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR opt-einsum-fx
-
-# For ROCm, cuEquivariance may not have pre-built wheels, try without it first
-# or install from source if needed
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance || true
-CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR cuequivariance-torch || true
-
-# Install MACE (remove --no-build-isolation to allow proper wheel building)
-git clone https://github.com/ACEsuit/mace.git
-cd mace
-CC=cc CXX=CC pip install --prefix $LAMMPS_INSTALL_DIR .
-cd ../ && rm -rf mace
+# Install nequip-allegro from PyPI (this also installs nequip automatically)
+CC=cc CXX=CC pip install --no-build-isolation --prefix $LAMMPS_INSTALL_DIR nequip-allegro==$ALLEGRO_VERSION
 
 module load craype-network-ofi
 
-# Download and setup libtorch
+# Download and prepare libtorch
 curl -LO https://download.pytorch.org/libtorch/rocm6.0/libtorch-cxx11-abi-shared-with-deps-$LIBTORCH_VERSION.zip
 unzip libtorch-cxx11-abi-shared-with-deps-*.zip
 
 pushd libtorch/lib
 
-for libwithhash in $(ls *-*.so*); do 
-  for lib in *.so; do 
-    patchelf --replace-needed $libwithhash $(s=$libwithhash; echo ${s%-*}.so${s#*.so*}) $lib
+# Patch library dependencies
+if ls *-*.so* 1> /dev/null 2>&1; then
+  for libwithhash in *-*.so*; do 
+    if ls *.so 1> /dev/null 2>&1; then
+      for lib in *.so; do 
+        patchelf --replace-needed $libwithhash $(s=$libwithhash; echo ${s%-*}.so${s#*.so*}) $lib 2>/dev/null || true
+      done
+    fi
   done
-done
+fi
 
-pwd
-
+# Remove versioned libraries
 rm -rf *-*.so*
 
+# Copy essential libraries
 filetocopy=(libtorch.so libtorch_cpu.so libc10.so libc10_hip.so libtorch_hip.so
 libmagma.so libgomp.so libcaffe2_nvrtc.so)
 
 mkdir -p $LAMMPS_INSTALL_DIR/libtorch
 
 for lib in ${filetocopy[@]}; do 
-  cp $lib $LAMMPS_INSTALL_DIR/libtorch/$lib
+  if [ -f $lib ]; then
+    cp $lib $LAMMPS_INSTALL_DIR/libtorch/$lib
+  fi
 done
 
 popd
 
-# Fix CMake files
+# Fix CMake configuration
 sed -i 's/hip::hipfft;//' /libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
-sed -i '95s/^/#/' /libtorch/share/cmake/Caffe2/public/LoadHIP.cmake
-sed -i 's/roc::hipblaslt;//g' /libtorch/share/cmake/Caffe2/Caffe2Targets.cmake
 
-# Clone LAMMPS develop branch
-git clone --branch=$LAMMPS_BRANCH --depth=1 $LAMMPS_REPO lammps-$LAMMPS_VERSION
+# Download LAMMPS development branch
+curl -LO https://github.com/lammps/lammps/archive/refs/heads/$LAMMPS_BRANCH.tar.gz
+tar xf $LAMMPS_BRANCH.tar.gz
 
-cd lammps-$LAMMPS_VERSION
+# Download pair_nequip_allegro from main branch
+curl -LO https://github.com/mir-group/pair_nequip_allegro/archive/refs/heads/$PAIR_ALLEGRO_BRANCH.tar.gz
+tar xf $PAIR_ALLEGRO_BRANCH.tar.gz
+
+# Patch LAMMPS with pair styles (adds both pair_nequip AND pair_allegro)
+cd pair_nequip_allegro-$PAIR_ALLEGRO_BRANCH
+./patch_lammps.sh ../lammps-$LAMMPS_BRANCH/
+
+cd ../lammps-$LAMMPS_BRANCH
 
 mkdir build && cd build
 
+# Set HIP compiler flags with pthread
 export HIPCC_COMPILE_FLAGS_APPEND="-std=c++17 -isystem ${CRAY_MPICH_PREFIX}/include "
-export HIPCC_LINK_FLAGS_APPEND="-L${CRAY_MPICH_PREFIX}/lib -lmpi ${PE_MPICH_GTL_DIR_amd_gfx90a} ${PE_MPICH_GTL_LIBS_amd_gfx90a} "
+export HIPCC_LINK_FLAGS_APPEND="-L${CRAY_MPICH_PREFIX}/lib -lmpi ${PE_MPICH_GTL_DIR_amd_gfx90a} ${PE_MPICH_GTL_LIBS_amd_gfx90a} -lpthread"
 
 export CMAKE_PREFIX_PATH=/libtorch/share/cmake:$ROCM_PATH/lib/cmake
 
+# Configure LAMMPS with CMake (with OpenMP enabled for better performance)
 cmake ../cmake \
   -D CMAKE_INSTALL_PREFIX=$LAMMPS_INSTALL_DIR \
   -D CMAKE_BUILD_TYPE=Release \
   -D CMAKE_CXX_COMPILER=hipcc \
   -D PKG_KOKKOS=ON \
   -D BUILD_MPI=ON \
-  -D BUILD_OMP=ON \
+  -D BUILD_OMP=OFF \
   -D Kokkos_ARCH_ZEN3=ON \
   -D Kokkos_ARCH_VEGA90A=ON \
   -D Kokkos_ENABLE_SERIAL=ON \
   -D Kokkos_ENABLE_HIP=ON \
-  -D Kokkos_ENABLE_OPENMP=ON \
+  -D Kokkos_ENABLE_OPENMP=OFF \
   -D HIP_PATH=/opt/rocm \
   -D CMAKE_TUNE_FLAGS="-munsafe-fp-atomics" \
   -D CMAKE_INSTALL_RPATH='$ORIGIN/../libtorch' \
-  -D PKG_ML-MACE=ON \
-  -D PKG_ML-IAP=ON \
-  -D MLIAP_ENABLE_PYTHON=ON \
-  -D PKG_ML-SNAP=ON \
-  -D PKG_PYTHON=ON \
-  -D BUILD_SHARED_LIBS=ON \
   -D MKL_INCLUDE_DIR=/opt/pytorch/include
 
-grep -rl "std=c++14" . | xargs -r sed -i 's/-std=c++14//g' || true
+# Remove C++14 flags if present
+grep -rl "std=c++14" . 2>/dev/null | xargs sed -i 's/-std=c++14//g' 2>/dev/null || true
 
+# Build and install
 make install -j16
 
-# Install LAMMPS Python package
-make install-python
+# Cleanup
+cd /
 
-cd / 
-
-rm -rf libtorch lammps-$LAMMPS_VERSION
+rm -rf libtorch lammps-$LAMMPS_BRANCH $LAMMPS_BRANCH.tar.gz
+rm -rf pair_nequip_allegro-$PAIR_ALLEGRO_BRANCH $PAIR_ALLEGRO_BRANCH.tar.gz
 rm -rf libtorch-cxx11-abi-shared-with-deps-*.zip target.lst
 
-mkdir -p /opt/container_modules/lammps-mace/
+# Create module file
+mkdir -p /opt/container_modules/lammps-pair-allegro/
 
-cat >/opt/container_modules/lammps-mace/$LAMMPS_VERSION.lua <<EOF1
+cat >/opt/container_modules/lammps-pair-allegro/$LAMMPS_BRANCH.lua <<EOF1
 local root="$LAMMPS_INSTALL_DIR"
 
 if not isloaded("pytorch") then
