@@ -24,8 +24,8 @@ else
 fi
 
 for stage in $(seq ${start_stage} ${num_stages}); do
-  build_cmd="singularity build" 
-  
+  build_cmd="singularity build"
+
   if [ -f binds/stage${stage}.bind ]; then
     build_cmd="${build_cmd} -B$(s=$(cat binds/stage${stage}.bind | tr '\n' ','); echo ${s%,})"
   fi
@@ -48,7 +48,7 @@ for stage in $(seq ${start_stage} ${num_stages}); do
     build_cmd="${build_cmd} stage${stage}.sif"
   fi
 
-  build_cmd="${build_cmd} defs/stage${stage}.def"  
+  build_cmd="${build_cmd} defs/stage${stage}.def"
 
   echo "Running build command: ${build_cmd}"
 
