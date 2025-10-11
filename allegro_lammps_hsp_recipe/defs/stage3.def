@@ -49,12 +49,11 @@ pip install wandb==$WANDB_VERSION mkl-include==$MKL_INCLUDE_VERSION \
              --no-cache-dir \
              --prefix $PYTORCH_INSTALL_DIR
 
-filetorm=(librocsparse.so libroctracer64.so libroctx64.so rocblas librocsolver.so 
-librocfft-device-3.so librocfft.so librocm_smi64.so librocrand.so librocfft-device-2.so 
-librocfft-device-1.so librocfft-device-0.so librocblas.so librccl.so libamd_comgr.so 
-libamdhip64.so libhipblas.so libhipfft.so libhiprand.so libhipsparse.so libhsa-runtime64.so 
+filetorm=(librocsparse.so libroctracer64.so libroctx64.so rocblas librocsolver.so
+librocfft-device-3.so librocfft.so librocm_smi64.so librocrand.so librocfft-device-2.so
+librocfft-device-1.so librocfft-device-0.so librocblas.so librccl.so libamd_comgr.so
+libamdhip64.so libhipblas.so libhipfft.so libhiprand.so libhipsparse.so libhsa-runtime64.so
 libMIOpen.so)
-
 cd $PYTORCH_INSTALL_DIR/lib64/python$PYTHON_VERSION/site-packages/torch/lib
 rm -rf ${filetorm[@]}
 
@@ -102,7 +101,6 @@ setenv("ROCM_TARGET_LST", pathJoin(root, "target.lst"))
 prepend_path("PATH", pathJoin(root, "bin"))
 
 prepend_path("CPATH", pathJoin(root, "include"))
-
 prepend_path("LD_LIBRARY_PATH", pathJoin(root, "lib"))
 prepend_path("LD_LIBRARY_PATH", pathJoin(root, "lib64"))
 prepend_path("LD_LIBRARY_PATH", pathJoin(root, "llvm/lib"))
