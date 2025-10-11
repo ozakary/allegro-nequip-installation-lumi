@@ -24,7 +24,7 @@ rm /version.conf
 cat > /opt/container.d/20_init_user_environment.sh << EOF1
 #!/bin/sh
 
-module load lammps-mace
+module load lammps-pair-allegro
 
 EOF1
 
@@ -47,14 +47,18 @@ EOF2
 
  This container provides the following packages:
 
-  - LAMMPS (Large-scale Atomic/Molecular Massively Parallel Simulator) with MACE support
-  - MACE (E(3)-equivariant machine-learning interatomic potential)
+  - LAMMPS (development branch - Large-scale Atomic/Molecular Massively Parallel Simulator)
+  - pair_allegro (LAMMPS pair style for Allegro with Kokkos support)
+  - pair_nequip (LAMMPS pair style for NequIP)
+  - Allegro 0.4.0 (E(3)-equivariant machine-learning interatomic potential)
+  - NequIP 0.7.0 (equivariant interatomic potentials)
   - ASE (Atomic Simulation Environment)
 
   Please consult the help for the individual packages for more
   information on how to run them:
-
    - LAMMPS    singularity run-help --app lammps \$SIF
+   - NequIP    singularity run-help --app nequip \$SIF
+   - Allegro   singularity run-help --app allegro \$SIF
    - ASE       singularity run-help --app ase \$SIF
 
  In addition, you can use the Python or pip executable from the container
@@ -76,7 +80,7 @@ exec python "\$@"
  Run the Python installed in the container. The general syntax is:
 
    \$ singularity run --app python \$SIF PYTHON-ARGS
- 
+
 
 %appenv python
 
@@ -95,7 +99,7 @@ exec pip "\$@"
  Run the pip installed in the container. The general syntax is:
 
    \$ singularity run --app pip \$SIF PIP-ARGS
- 
+
 
 %appenv pip
 
@@ -104,19 +108,112 @@ source /.container.bashrc &> /dev/null
 #-----------------------------------------------------------------------------#
 # LAMMPS app                                                                  #
 #-----------------------------------------------------------------------------#
-
 %apprun lammps
 
-exec lmp "\$@"
+export PATH="/opt/lammps/bin:$PATH"
+export LD_LIBRARY_PATH="/opt/lammps/lib:/opt/lammps/lib64:/opt/lammps/libtorch:$LD_LIBRARY_PATH"
+source /.container.bashrc &> /dev/null
+exec lmp "$@"
 
 %apphelp lammps
 
- Run the LAMMPS executable with MACE support. The general syntax is:
+ Run the LAMMPS executable with pair_nequip and pair_allegro support.
+ The general syntax is:
 
    \$ singularity run --app lammps \$SIF LAMMPS-ARGS
- 
+
+ Example with Kokkos on GPU:
+   \$ singularity run --app lammps \$SIF -k on g 1 -sf kk -pk kokkos newton on neigh half -in in.script
+
 
 %appenv lammps
+
+export PATH="/opt/lammps/bin:$PATH"
+export LD_LIBRARY_PATH="/opt/lammps/lib:/opt/lammps/lib64:/opt/lammps/libtorch:$LD_LIBRARY_PATH"
+source /.container.bashrc &> /dev/null
+
+#-----------------------------------------------------------------------------#
+# NequIP app                                                                  #
+#-----------------------------------------------------------------------------#
+
+%apprun nequip
+
+argv=( "\$@" )
+argc=\${#argv[@]}
+
+valid_variants=( benchmark evaluate deploy train )
+
+if [[ \$argc -lt 1 ]]; then
+  echo "Please provide an nequip variant."
+  echo "Valid variants are: \${valid_variants[@]}"
+  exit 1
+fi
+
+variant="\${argv[0]}"
+
+found_valid=no
+for valid in \${valid_variants[@]}; do
+  if [[ "\$variant" == "\$valid" ]]; then
+    found_valid=yes; break
+  fi
+done
+
+if [[ \$found_valid == yes ]]; then
+  exec nequip-\$variant "\${argv[@]:1}"
+else
+  echo "No valid nequip variant provided."
+  echo "Valid variants are: \${valid_variants[@]}"
+fi
+
+%apphelp nequip
+source /.container.bashrc &> /dev/null
+
+#-----------------------------------------------------------------------------#
+# Allegro app                                                                 #
+#-----------------------------------------------------------------------------#
+
+%apprun allegro
+
+argv=( "\$@" )
+argc=\${#argv[@]}
+
+valid_variants=( train deploy )
+
+if [[ \$argc -lt 1 ]]; then
+  echo "Please provide an allegro variant."
+  echo "Valid variants are: \${valid_variants[@]}"
+  exit 1
+fi
+
+variant="\${argv[0]}"
+
+found_valid=no
+for valid in \${valid_variants[@]}; do
+  if [[ "\$variant" == "\$valid" ]]; then
+    found_valid=yes; break
+  fi
+done
+
+if [[ \$found_valid == yes ]]; then
+  exec allegro-\$variant "\${argv[@]:1}"
+else
+  echo "No valid allegro variant provided."
+  echo "Valid variants are: \${valid_variants[@]}"
+fi
+
+%apphelp allegro
+
+ Run one of the Allegro executables. The first argument is the executable
+ to run. For example to run allegro-train, run the following command:
+
+   \$ singularity run --app allegro \$SIF train ALLEGRO-TRAIN-ARGS
+
+ The general syntax is:
+
+   \$ singularity run --app allegro \$SIF train|deploy ALLEGRO-ARGS
+
+
+%appenv allegro
 
 source /.container.bashrc &> /dev/null
 
@@ -133,7 +230,7 @@ exec ase "\$@"
  Run the ASE command line tool. The general syntax is:
 
    \$ singularity run --app ase \$SIF ASE-SUBCOMMAND ASE-ARGS
- 
+
 
 %appenv ase
 
